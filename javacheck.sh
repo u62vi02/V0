@@ -50,8 +50,11 @@ for ns in $namespaces; do
             echo -e "  ${BLUE}└─ Conteneur: $container${NC}"
             
             # Test 1: Vérifier si Java est dans le PATH
+            java_processes=$(kubectl exec -n $ns $pod -c $container -- ps aux 2>/dev/null | grep -E '[j]ava|[j]re' || true)
+            
             if kubectl exec -n $ns $pod -c $container -- which java > /dev/null 2>&1; then
                 # Test 2: Vérifier s'il y a un processus Java en cours
+                
                 java_process=$(kubectl exec -n $ns $pod -c $container -- ps aux 2>/dev/null | grep -v grep | grep java | head -n1)
                 
                 if [ ! -z "$java_process" ]; then
