@@ -39,7 +39,7 @@ echo -e "${BLUE}🔍 Recherche des namespaces contenant 'uat' ou 'develop'...${N
 echo ""
 
 # Récupérer les namespaces filtrés (triés)
-namespaces=$(kubectl get ns -o jsonpath='{.items[*].metadata.name}' | tr ' ' '\n' | grep -E '^[[:alnum:]]{2}-(development|uat|integration)$' | sort)
+namespaces=$(kubectl get ns -o jsonpath='{.items[*].metadata.name}' | tr ' ' '\n' | grep -E '\-(development|uat|integration)$' | sort)
 
 if [ -z "$namespaces" ]; then
     echo -e "${RED}Aucun namespace contenant 'uat' ou 'develop' trouvé${NC}"
