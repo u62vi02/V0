@@ -92,7 +92,17 @@ for ns in $namespaces; do
 done
 
 # Résumé global
+total_resources=$((total_ingress + total_httproute))
+
+if [ "$total_resources" -gt 0 ]; then
+    ingress_pct=$((100 * total_ingress / total_resources))
+    httproute_pct=$((100 * total_httproute / total_resources))
+else
+    ingress_pct=0
+    httproute_pct=0
+fi
+
 echo -e "==================== SUMMARY ====================${NC}"
-echo -e "Total Ingress détectés    : ${GREEN}$total_ingress${NC}"
-echo -e "Total HTTPRoute détectées : ${GREEN}$total_httproute${NC}"
+echo -e "Total Ingress détectés    : ${GREEN}$total_ingress${NC} (${ingress_pct}%)"
+echo -e "Total HTTPRoute détectées : ${GREEN}$total_httproute${NC} (${httproute_pct}%)"
 echo -e "=================================================${NC}"
