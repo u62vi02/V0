@@ -10,21 +10,31 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 usage() {
-    echo "Usage: $0 [-v] [-h]"
-    echo "  -v  mode verbose (affiche les détails par namespace)"
-    echo "  -h  affiche cette aide"
+    echo "Usage: $0 [-v] [-f <filtre>] [-h]"
+    echo "  -v              mode verbose (affiche les détails par namespace)"
+    echo "  -f <filtre>     filtre les namespaces contenant la valeur passée (ex: ssd)"
+    echo "  -h              affiche cette aide"
 }
 
 VERBOSE=0
+FILTER=""
 
-while getopts ":vh" opt; do
+while getopts ":vf:h" opt; do
     case "${opt}" in
         v)
             VERBOSE=1
             ;;
+        f)
+            FILTER="${OPTARG}"
+            ;;
         h)
             usage
             exit 0
+            ;;
+        :)
+            echo -e "${RED}L'option -${OPTARG} requiert une valeur${NC}"
+            usage
+            exit 1
             ;;
         *)
             echo -e "${RED}Option invalide: -${OPTARG}${NC}"
@@ -35,14 +45,26 @@ while getopts ":vh" opt; do
 done
 shift $((OPTIND - 1))
 
-echo -e "${BLUE}🔍 Recherche des namespaces contenant 'uat' ou 'develop'...${NC}"
+if [ -n "$FILTER" ]; then
+    echo -e "${BLUE}🔍 Recherche des namespaces contenant '${FILTER}'...${NC}"
+else
+    echo -e "${BLUE}🔍 Recherche des namespaces se terminant par -development, -uat ou -integration...${NC}"
+fi
 echo ""
 
 # Récupérer les namespaces filtrés (triés)
-namespaces=$(kubectl get ns -o jsonpath='{.items[*].metadata.name}' | tr ' ' '\n' | grep -E '\-(development|uat|integration)$' | sort)
+if [ -n "$FILTER" ]; then
+    namespaces=$(kubectl get ns -o jsonpath='{.items[*].metadata.name}' | tr ' ' '\n' | grep -i -- "$FILTER" | sort)
+else
+    namespaces=$(kubectl get ns -o jsonpath='{.items[*].metadata.name}' | tr ' ' '\n' | grep -E '\-(development|uat|integration)$' | sort)
+fi
 
 if [ -z "$namespaces" ]; then
-    echo -e "${RED}Aucun namespace contenant 'uat' ou 'develop' trouvé${NC}"
+    if [ -n "$FILTER" ]; then
+        echo -e "${RED}Aucun namespace contenant '${FILTER}' trouvé${NC}"
+    else
+        echo -e "${RED}Aucun namespace se terminant par -development, -uat ou -integration trouvé${NC}"
+    fi
     exit 0
 fi
 
