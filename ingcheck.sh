@@ -38,8 +38,8 @@ shift $((OPTIND - 1))
 echo -e "${BLUE}🔍 Recherche des namespaces contenant 'uat' ou 'develop'...${NC}"
 echo ""
 
-# Récupérer les namespaces filtrés
-namespaces=$(kubectl get ns -o jsonpath='{.items[*].metadata.name}' | tr ' ' '\n' | grep -E '^[[:alnum:]]{2}-(development|uat|integration)$')
+# Récupérer les namespaces filtrés (triés)
+namespaces=$(kubectl get ns -o jsonpath='{.items[*].metadata.name}' | tr ' ' '\n' | grep -E '^[[:alnum:]]{2}-(development|uat|integration)$' | sort)
 
 if [ -z "$namespaces" ]; then
     echo -e "${RED}Aucun namespace contenant 'uat' ou 'develop' trouvé${NC}"
@@ -63,20 +63,24 @@ for ns in $namespaces; do
 
     if [ "$ingress_count" -eq 0 ] && [ "$httproute_count" -gt 0 ]; then
         status_icon="✅"
+        ns_color="$GREEN"
         status_text="${GREEN}OK: $httproute_count / $ingress_count ${NC}"
     elif [ "$ingress_count" -gt 0 ] && [ "$httproute_count" -gt 0 ]; then
         status_icon="⚠️"
+        ns_color="$YELLOW"
         status_text="${YELLOW}ON GOING: $httproute_count / $ingress_count ${NC}"
     elif [ "$ingress_count" -gt 0 ] && [ "$httproute_count" -eq 0 ]; then
         status_icon="❌"
+        ns_color="$RED"
         status_text="${RED}TO BEGIN: $httproute_count / $ingress_count ${NC}"
     else
         status_icon="ℹ️"
+        ns_color="$BLUE"
         status_text="${BLUE}INFO: pas d'ingress ni httproute detecté ${NC}"
     fi
 
     echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo -e "${GREEN}📁 Namespace: $ns${NC} | $status_icon $status_text"
+    echo -e "📁 Namespace: ${ns_color}$ns${NC} | $status_icon $status_text"
     echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 
     # Bloc détaillé seulement en mode verbose
