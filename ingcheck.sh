@@ -29,16 +29,16 @@ for ns in $namespaces; do
 
     if [ "$ingress_count" -eq 0 ] && [ "$httproute_count" -gt 0 ]; then
         status_icon="✅"
-        status_text="${GREEN}OK: ingress=0 et httproute>0${NC}"
+        status_text="${GREEN}OK: $httproute_count / $ingress_count ${NC}"
     elif [ "$ingress_count" -gt 0 ] && [ "$httproute_count" -gt 0 ]; then
         status_icon="⚠️"
-        status_text="${YELLOW}ATTENTION: ingress>0 et httproute>0${NC}"
+        status_text="${YELLOW}ON GOING: $httproute_count / $ingress_count ${NC}"
     elif [ "$ingress_count" -gt 0 ] && [ "$httproute_count" -eq 0 ]; then
         status_icon="❌"
-        status_text="${RED}KO: ingress>0 et httproute=0${NC}"
+        status_text="${RED}TO BEGIN: $httproute_count / $ingress_count ${NC}"
     else
         status_icon="ℹ️"
-        status_text="${BLUE}INFO: ingress=0 et httproute=0${NC}"
+        status_text="${BLUE}INFO: pas d'ingress ni httproute detecté ${NC}"
     fi
 
     echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
