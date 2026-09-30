@@ -9,6 +9,32 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
+usage() {
+    echo "Usage: $0 [-v] [-h]"
+    echo "  -v  mode verbose (affiche les détails par namespace)"
+    echo "  -h  affiche cette aide"
+}
+
+VERBOSE=0
+
+while getopts ":vh" opt; do
+    case "${opt}" in
+        v)
+            VERBOSE=1
+            ;;
+        h)
+            usage
+            exit 0
+            ;;
+        *)
+            echo -e "${RED}Option invalide: -${OPTARG}${NC}"
+            usage
+            exit 1
+            ;;
+    esac
+done
+shift $((OPTIND - 1))
+
 echo -e "${BLUE}🔍 Recherche des namespaces contenant 'uat' ou 'develop'...${NC}"
 echo ""
 
@@ -20,12 +46,20 @@ if [ -z "$namespaces" ]; then
     exit 0
 fi
 
+# Totaux globaux
+total_ingress=0
+total_httproute=0
+
 for ns in $namespaces; do
     ingress_count=$(kubectl get ingress -n "$ns" --no-headers 2>/dev/null | wc -l | tr -d ' ')
     httproute_count=$(kubectl get httproute -n "$ns" --no-headers 2>/dev/null | wc -l | tr -d ' ')
 
     [ -z "$ingress_count" ] && ingress_count=0
     [ -z "$httproute_count" ] && httproute_count=0
+
+    # Cumul global
+    total_ingress=$((total_ingress + ingress_count))
+    total_httproute=$((total_httproute + httproute_count))
 
     if [ "$ingress_count" -eq 0 ] && [ "$httproute_count" -gt 0 ]; then
         status_icon="✅"
@@ -44,7 +78,17 @@ for ns in $namespaces; do
     echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo -e "${GREEN}📁 Namespace: $ns${NC} | $status_icon $status_text"
     echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo -e "  🌐 Ingress    : ${BLUE}$ingress_count${NC}"
-    echo -e "  🛣️  HTTPRoute : ${BLUE}$httproute_count${NC}"
-    echo ""
+
+    # Bloc détaillé seulement en mode verbose
+    if [ "$VERBOSE" -eq 1 ]; then
+        echo -e "  🌐 Ingress    : ${BLUE}$ingress_count${NC}"
+        echo -e "  🛣️  HTTPRoute : ${BLUE}$httproute_count${NC}"
+        echo ""
+    fi
 done
+
+# Résumé global
+echo -e "${BLUE}==================== SUMMARY ====================${NC}"
+echo -e "Total Ingress détectés    : ${GREEN}$total_ingress${NC}"
+echo -e "Total HTTPRoute détectées : ${GREEN}$total_httproute${NC}"
+echo -e "${BLUE}=================================================${NC}"
