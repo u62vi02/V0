@@ -92,7 +92,7 @@ for ns in $namespaces; do
 done
 
 # Résumé global
-echo -e "${BLUE}==================== SUMMARY ====================${NC}"
+echo -e "==================== SUMMARY ====================${NC}"
 echo -e "Total Ingress détectés    : ${GREEN}$total_ingress${NC}"
 echo -e "Total HTTPRoute détectées : ${GREEN}$total_httproute${NC}"
-echo -e "${BLUE}=================================================${NC}"
+echo -e "=================================================${NC}"
