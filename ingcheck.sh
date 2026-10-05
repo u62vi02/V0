@@ -10,22 +10,27 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 usage() {
-    echo "Usage: $0 [-v] [-f <filtre>] [-h]"
-    echo "  -v              mode verbose (affiche les détails par namespace)"
-    echo "  -f <filtre>     filtre les namespaces contenant la valeur passée (ex: ssd)"
-    echo "  -h              affiche cette aide"
+    echo "Usage: $0 [-v] [-f <filtre>] [-o <répertoire>] [-h]"
+    echo "  -v                  mode verbose (affiche les détails par namespace)"
+    echo "  -f <filtre>         filtre les namespaces contenant la valeur passée (ex: ssd)"
+    echo "  -o <répertoire>     exporte les configurations YAML dans le répertoire spécifié"
+    echo "  -h                  affiche cette aide"
 }
 
 VERBOSE=0
 FILTER=""
+OUTPUT_DIR=""
 
-while getopts ":vf:h" opt; do
+while getopts ":vf:o:h" opt; do
     case "${opt}" in
         v)
             VERBOSE=1
             ;;
         f)
             FILTER="${OPTARG}"
+            ;;
+        o)
+            OUTPUT_DIR="${OPTARG}"
             ;;
         h)
             usage
@@ -44,6 +49,16 @@ while getopts ":vf:h" opt; do
     esac
 done
 shift $((OPTIND - 1))
+
+# Créer le répertoire de sortie s'il est spécifié
+if [ -n "$OUTPUT_DIR" ]; then
+    if ! mkdir -p "$OUTPUT_DIR"; then
+        echo -e "${RED}Erreur: impossible de créer le répertoire '$OUTPUT_DIR'${NC}"
+        exit 1
+    fi
+    echo -e "${BLUE}📁 Exporte dans le répertoire: $OUTPUT_DIR${NC}"
+    echo ""
+fi
 
 if [ -n "$FILTER" ]; then
     echo -e "${BLUE}🔍 Recherche des namespaces contenant '${FILTER}'...${NC}"
@@ -71,6 +86,8 @@ fi
 # Totaux globaux
 total_ingress=0
 total_httproute=0
+exported_ingress=0
+exported_httproute=0
 
 for ns in $namespaces; do
     ingress_count=$(kubectl get ingress -n "$ns" --no-headers 2>/dev/null | wc -l | tr -d ' ')
@@ -111,6 +128,39 @@ for ns in $namespaces; do
         echo -e "  🛣️  HTTPRoute : ${BLUE}$httproute_count${NC}"
         echo ""
     fi
+
+    # Export des configurations YAML si option -o spécifiée
+    if [ -n "$OUTPUT_DIR" ]; then
+        # Exporter les Ingress
+        if [ "$ingress_count" -gt 0 ]; then
+            ingress_list=$(kubectl get ingress -n "$ns" -o jsonpath='{.items[*].metadata.name}')
+            for ing in $ingress_list; do
+                output_file="${OUTPUT_DIR}/${ns}-ing-${ing}.yaml"
+                kubectl get ingress "$ing" -n "$ns" -o yaml > "$output_file"
+                if [ $? -eq 0 ]; then
+                    echo -e "  ✅ Exporté: ${BLUE}$output_file${NC}"
+                    exported_ingress=$((exported_ingress + 1))
+                else
+                    echo -e "  ${RED}❌ Erreur lors de l'export de $ing${NC}"
+                fi
+            done
+        fi
+
+        # Exporter les HTTPRoute
+        if [ "$httproute_count" -gt 0 ]; then
+            httproute_list=$(kubectl get httproute -n "$ns" -o jsonpath='{.items[*].metadata.name}')
+            for route in $httproute_list; do
+                output_file="${OUTPUT_DIR}/${ns}-httproute-${route}.yaml"
+                kubectl get httproute "$route" -n "$ns" -o yaml > "$output_file"
+                if [ $? -eq 0 ]; then
+                    echo -e "  ✅ Exporté: ${BLUE}$output_file${NC}"
+                    exported_httproute=$((exported_httproute + 1))
+                else
+                    echo -e "  ${RED}❌ Erreur lors de l'export de $route${NC}"
+                fi
+            done
+        fi
+    fi
 done
 
 # Résumé global
@@ -127,4 +177,10 @@ fi
 echo -e "==================== SUMMARY ====================${NC}"
 echo -e "Total Ingress détectés    : ${GREEN}$total_ingress${NC} (${ingress_pct}%)"
 echo -e "Total HTTPRoute détectées : ${GREEN}$total_httproute${NC} (${httproute_pct}%)"
+
+if [ -n "$OUTPUT_DIR" ]; then
+    total_exported=$((exported_ingress + exported_httproute))
+    echo -e "Fichiers exportés         : ${GREEN}$total_exported${NC}"
+fi
+
 echo -e "=================================================${NC}"
