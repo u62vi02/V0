@@ -26,7 +26,7 @@ spec:
     spec:
       containers:
       - name: busybox
-        image: busybox:latest
+        image: layer-kraft.repository.saas/busybox:latest
         command: ["httpd"]
         args: ["-f", "-v", "-p", "8080", "-h", "/www"]
         ports:
@@ -62,7 +62,7 @@ spec:
     name: busybox-hello
     weight: 100
   port:
-    targetPort: 80
+    targetPort: 8080
   tls:
     termination: edge
     insecureEdgeTerminationPolicy: Redirect
