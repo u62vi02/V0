@@ -1,0 +1,68 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hello-html
+data:
+  index.html: |
+    <html>
+      <body>
+        <h1>Hello World depuis BusyBox sur OpenShift !</h1>
+      </body>
+    </html>
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: busybox-hello
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: busybox-hello
+  template:
+    metadata:
+      labels:
+        app: busybox-hello
+    spec:
+      containers:
+      - name: busybox
+        image: busybox:latest
+        command: ["httpd"]
+        args: ["-f", "-v", "-p", "8080", "-h", "/www"]
+        ports:
+        - containerPort: 8080
+        volumeMounts:
+        - name: html-volume
+          mountPath: /www
+      volumes:
+      - name: html-volume
+        configMap:
+          name: hello-html
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: busybox-hello
+spec:
+  selector:
+    app: busybox-hello
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: busybox-hello
+spec:
+  host: www.toto.my.com
+  to:
+    kind: Service
+    name: busybox-hello
+    weight: 100
+  port:
+    targetPort: 80
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
